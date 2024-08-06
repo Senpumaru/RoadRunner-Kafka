@@ -2,7 +2,7 @@ apiVersion: apps/v1
 kind: Deployment
 metadata:
   name: kafka-ui
-  namespace: dev-road-runner
+  namespace: road-runner
 spec:
   replicas: 1
   selector:
@@ -22,6 +22,6 @@ spec:
         - name: KAFKA_CLUSTERS_0_NAME
           value: kafka
         - name: KAFKA_CLUSTERS_0_BOOTSTRAPSERVERS
-          value: kafka.dev-road-runner.svc.cluster.local:9092
+          value: kafka.road-runner.svc.cluster.local:9092
         - name: KAFKA_CLUSTERS_0_ZOOKEEPER
           value: ""

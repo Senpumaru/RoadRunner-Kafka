@@ -1,0 +1,18 @@
+# kafka-service.yaml
+apiVersion: v1
+kind: Service
+metadata:
+  name: kafka-service
+  namespace: road-runner
+spec:
+  selector:
+    app: kafka
+  ports:
+    - name: client
+      protocol: TCP
+      port: 9092
+      targetPort: 9092
+    - name: controller
+      protocol: TCP
+      port: 9093
+      targetPort: 9093
