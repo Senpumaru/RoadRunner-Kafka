@@ -1,0 +1,14 @@
+replicaCount: 1
+kraft:
+  enabled: true
+listeners:
+  client:
+    protocol: PLAINTEXT
+externalAccess:
+  enabled: false
+persistence:
+  enabled: false
+provisioning:
+  enabled: false
+extraConfig: |
+  auto.create.topics.enable=true
