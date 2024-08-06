@@ -1,0 +1,16 @@
+replicaCount: 1
+kraft:
+  enabled: true
+listeners:
+  client:
+    name: PLAINTEXT
+    protocol: PLAINTEXT
+    port: 9092
+externalAccess:
+  enabled: false
+persistence:
+  enabled: false
+provisioning:
+  enabled: false
+extraConfig: |
+  auto.create.topics.enable=true
