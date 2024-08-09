@@ -1,0 +1,99 @@
+name: Kafka CI/CD
+
+on:
+  push:
+    branches: [ main, dev ]
+  pull_request:
+    branches: [ main, dev ]
+
+jobs:
+  lint:
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v2
+
+    - name: Lint Docker Compose
+      uses: ItsKarma/docker-compose-validator-action@v1.0.0
+      with:
+        compose-file: './docker-compose.yml'
+
+    - name: Lint Shell Scripts
+      uses: azohra/shell-linter@latest
+      with:
+        path: "*.sh"
+
+  test:
+    runs-on: ubuntu-latest
+    needs: lint
+    steps:
+    - uses: actions/checkout@v2
+
+    - name: Set up JDK 11
+      uses: actions/setup-java@v2
+      with:
+        java-version: '11'
+        distribution: 'adopt'
+
+    - name: Install Kafka tools
+      run: |
+        wget https://downloads.apache.org/kafka/3.8.0/kafka_2.13-3.8.0.tgz
+        tar -xzf kafka_2.13-3.8.0.tgz
+        echo "$PWD/kafka_2.13-3.8.0/bin" >> $GITHUB_PATH
+
+    - name: Start Kafka services
+      run: docker-compose up -d
+
+    - name: Wait for Kafka to be ready
+      run: |
+        timeout 60s bash -c '
+        until kafka-topics.sh --bootstrap-server localhost:9092 --list; do
+          echo "Waiting for Kafka to be ready..."
+          sleep 5
+        done'
+
+    - name: Run Kafka tests
+      run: |
+        # Create a test topic
+        kafka-topics.sh --bootstrap-server localhost:9092 --create --topic test-topic --partitions 1 --replication-factor 1
+
+        # Produce a message
+        echo "Test message" | kafka-console-producer.sh --broker-list localhost:9092 --topic test-topic
+
+        # Consume the message
+        OUTPUT=$(kafka-console-consumer.sh --bootstrap-server localhost:9092 --topic test-topic --from-beginning --max-messages 1 --timeout-ms 10000)
+        
+        # Check if the consumed message matches the produced message
+        if [ "$OUTPUT" == "Test message" ]; then
+          echo "Test passed: message successfully produced and consumed"
+        else
+          echo "Test failed: unexpected message content"
+          exit 1
+        fi
+
+        # List topics
+        kafka-topics.sh --bootstrap-server localhost:9092 --list
+
+        # Describe the test topic
+        kafka-topics.sh --bootstrap-server localhost:9092 --describe --topic test-topic
+
+    - name: Stop Kafka services
+      run: docker-compose down
+
+  deploy:
+    runs-on: ubuntu-latest
+    needs: test
+    if: github.ref == 'refs/heads/main' || github.ref == 'refs/heads/dev'
+    steps:
+    - uses: actions/checkout@v2
+
+    - name: Deploy to Dev
+      if: github.ref == 'refs/heads/dev'
+      run: |
+        echo "Deploying to Dev environment"
+        # Add your deployment script or commands here
+
+    - name: Deploy to Production
+      if: github.ref == 'refs/heads/main'
+      run: |
+        echo "Deploying to Production environment"
+        # Add your deployment script or commands here
