@@ -12,10 +12,8 @@ jobs:
     steps:
     - uses: actions/checkout@v2
 
-    - name: Lint Docker Compose
-      uses: ItsKarma/docker-compose-validator-action@v1.0.0
-      with:
-        compose-file: './docker-compose.yml'
+    - name: Validate Docker Compose
+      run: docker-compose -f docker-compose.yml config
 
     - name: Lint Shell Scripts
       uses: azohra/shell-linter@latest
