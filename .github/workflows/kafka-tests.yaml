@@ -61,19 +61,20 @@ jobs:
 
     - name: Wait for Kafka to be ready
       run: |
-        timeout 60s bash -c '
-        until kafka-topics.sh --bootstrap-server localhost:9092 --list; do
+        while ! docker-compose exec -T kafka kafka-topics.sh --bootstrap-server kafka:9092 --list > /dev/null 2>&1; do
           echo "Waiting for Kafka to be ready..."
           sleep 5
-        done'
+        done
+        echo "Kafka is ready!"
 
     - name: Run Kafka tests
       run: |
-        # Your Kafka tests here
-        # ...
+        docker-compose exec -T kafka kafka-topics.sh --bootstrap-server kafka:9092 --create --topic test-topic --partitions 1 --replication-factor 1
+        echo "Test message" | docker-compose exec -T kafka kafka-console-producer.sh --broker-list kafka:9092 --topic test-topic
+        docker-compose exec -T kafka kafka-console-consumer.sh --bootstrap-server kafka:9092 --topic test-topic --from-beginning --max-messages 1 --timeout-ms 10000
 
     - name: Stop Kafka services
-      run: docker compose down
+      run: docker-compose down
 
   deploy:
     runs-on: ubuntu-latest
