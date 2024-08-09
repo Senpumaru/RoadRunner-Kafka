@@ -16,7 +16,7 @@ jobs:
       uses: docker/setup-buildx-action@v2
 
     - name: Validate Docker Compose
-      run: docker compose -f docker compose.yml config
+      run: docker compose -f docker-compose.yml config
 
     - name: Lint Shell Scripts
       uses: azohra/shell-linter@latest
@@ -32,55 +32,32 @@ jobs:
     - name: Set up Docker Buildx
       uses: docker/setup-buildx-action@v2
 
-    - name: Set up JDK 11
-      uses: actions/setup-java@v2
-      with:
-        java-version: '11'
-        distribution: 'adopt'
-
-    - name: Cache Kafka tools
-      uses: actions/cache@v2
-      with:
-        path: ~/kafka
-        key: ${{ runner.os }}-kafka-3.8.0
-        restore-keys: |
-          ${{ runner.os }}-kafka-
-
-    - name: Install Kafka tools
-      if: steps.cache-kafka.outputs.cache-hit != 'true'
-      run: |
-        wget https://downloads.apache.org/kafka/3.8.0/kafka_2.13-3.8.0.tgz
-        tar -xzf kafka_2.13-3.8.0.tgz
-        mv kafka_2.13-3.8.0 ~/kafka
-
-    - name: Add Kafka tools to PATH
-      run: echo "$HOME/kafka/bin" >> $GITHUB_PATH
-
     - name: Start Kafka services
       run: docker compose up -d
-
-    - name: Debug Kafka setup
-      run: |
-        docker compose ps
-        docker exec $(docker ps -q -f name=kafka) ls /opt/kafka/bin
-        docker exec $(docker ps -q -f name=kafka) cat /opt/kafka/config/server.properties
 
     - name: Wait for Kafka to be ready
       run: |
         timeout 300s bash -c '
-        until docker compose exec -T kafka /opt/kafka/bin/kafka-topics.sh --bootstrap-server localhost:9092 --list; do
+        until docker compose exec -T kafka /opt/kafka/bin/kafka-topics.sh --bootstrap-server kafka:9092 --list; do
           echo "Waiting for Kafka to be ready..."
           sleep 5
         done'
 
     - name: Run Kafka tests
       run: |
-        docker exec $(docker ps -q -f name=kafka) /opt/kafka/bin/kafka-topics.sh --bootstrap-server localhost:9092 --create --topic test-topic --partitions 1 --replication-factor 1
-        echo "Test message" | docker exec -i $(docker ps -q -f name=kafka) /opt/kafka/bin/kafka-console-producer.sh --broker-list localhost:9092 --topic test-topic
-        docker exec $(docker ps -q -f name=kafka) /opt/kafka/bin/kafka-console-consumer.sh --bootstrap-server localhost:9092 --topic test-topic --from-beginning --max-messages 1 --timeout-ms 10000
+        docker compose exec -T kafka /opt/kafka/bin/kafka-topics.sh --bootstrap-server kafka:9092 --create --topic test-topic --partitions 1 --replication-factor 1
+        echo "Test message" | docker compose exec -T kafka /opt/kafka/bin/kafka-console-producer.sh --bootstrap-server kafka:9092 --topic test-topic
+        docker compose exec -T kafka /opt/kafka/bin/kafka-console-consumer.sh --bootstrap-server kafka:9092 --topic test-topic --from-beginning --max-messages 1 --timeout-ms 10000
 
     - name: Stop Kafka services
       run: docker compose down
+
+    - name: Debug Kafka setup
+      if: failure()
+      run: |
+        docker compose ps
+        docker compose exec kafka ls /opt/kafka/bin
+        docker compose exec kafka cat /opt/kafka/config/kraft/server.properties
 
   deploy:
     runs-on: ubuntu-latest
