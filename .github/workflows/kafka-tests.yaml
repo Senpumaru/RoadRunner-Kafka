@@ -1,4 +1,4 @@
-name: Kafka CI/CD
+name: Kafka Docker-Compose CI/CD
 
 on:
   # push:
@@ -58,22 +58,3 @@ jobs:
         docker compose ps
         docker compose exec kafka ls /opt/kafka/bin
         docker compose exec kafka cat /opt/kafka/config/kraft/server.properties
-
-  deploy:
-    runs-on: ubuntu-latest
-    needs: test
-    if: github.ref == 'refs/heads/main' || github.ref == 'refs/heads/dev'
-    steps:
-    - uses: actions/checkout@v2
-
-    - name: Deploy to Dev
-      if: github.ref == 'refs/heads/dev'
-      run: |
-        echo "Deploying to Dev environment"
-        # Add your deployment script or commands here
-
-    - name: Deploy to Production
-      if: github.ref == 'refs/heads/main'
-      run: |
-        echo "Deploying to Production environment"
-        # Add your deployment script or commands here
